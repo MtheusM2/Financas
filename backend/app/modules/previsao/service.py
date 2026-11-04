@@ -5,7 +5,7 @@ from datetime import date, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.db import now
+from app.core.db import local_today
 from app.core.visibility import visible_clause
 from app.modules.contas.service import Scope, opening_balance
 from app.modules.dividas.models import Debt
@@ -95,7 +95,7 @@ def collect_events(db: Session, viewer_id: int, scope: Scope, today: date, end_k
 
 
 def forecast(db: Session, viewer_id: int, scope: Scope, months: int = 6, include_plans: bool = False) -> dict:
-    today = now().date()
+    today = local_today()
     end_key = month_key(today)
     for _ in range(months - 1):
         end_key = next_month(end_key)

@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from conftest import personal_account
 
 
@@ -134,3 +136,14 @@ def test_other_person_cannot_undo_or_delete_a_hidden_debt(ana, bia):
     assert bia.delete(f"/api/dividas/{debt['id']}/pagamentos/ultimo").status_code == 404
     assert bia.delete(f"/api/dividas/{debt['id']}").status_code == 404
     assert ana.get("/api/dividas").json()[0]["ultimo_pagamento"] is not None
+
+
+def test_today_follows_brasilia_time_at_night(ana, clock):
+    # 20/11 as 23h em Brasilia ja e 21/11 em UTC: a divida ainda vence hoje, nao esta atrasada.
+    new_debt(ana)
+    clock.current = datetime(2026, 11, 21, 2, 0, tzinfo=timezone.utc)
+    status = ana.get("/api/dividas").json()[0]
+    assert status["proximo_vencimento"] == "2026-11-20" and status["dias"] == 0 and status["situacao"] != "atrasada"
+    assert "Aluguel vence hoje" in titles(ana)
+    clock.current = datetime(2026, 11, 21, 3, 0, tzinfo=timezone.utc)  # meia-noite em Brasilia
+    assert ana.get("/api/dividas").json()[0]["situacao"] == "atrasada"

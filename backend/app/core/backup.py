@@ -10,7 +10,7 @@ from cryptography.fernet import Fernet
 from sqlalchemy.engine import make_url
 
 from app.core.config import get_settings
-from app.core.db import now
+from app.core.db import local_now
 
 
 def _fernet() -> Fernet:
@@ -32,7 +32,7 @@ def run_backup() -> Path:
     dump = subprocess.run(["pg_dump", "--clean", "--if-exists", *args], capture_output=True, env=env, check=True)
     folder = Path(settings.backup_dir)
     folder.mkdir(parents=True, exist_ok=True)
-    path = folder / f"financas-{now():%Y%m%d-%H%M%S}.sql.enc"
+    path = folder / f"financas-{local_now():%Y%m%d-%H%M%S}.sql.enc"
     path.write_bytes(_fernet().encrypt(dump.stdout))
     for old in sorted(folder.glob("financas-*.sql.enc"))[: -settings.backup_keep]:
         old.unlink()

@@ -4,7 +4,7 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.db import now
+from app.core.db import local_today
 from app.modules.autenticacao.models import User
 from app.modules.contas.service import Scope
 from app.modules.lancamentos.models import Transaction
@@ -50,7 +50,7 @@ def serialize(db: Session, goal: Goal, viewer_id: int) -> dict:
     saved, per_person = saved_of(db, goal, viewer_id)
     rate = monthly_rate(goal)
     plan = planned_monthly(goal)
-    elapsed = max(months_between(goal.start_date, now().date()), 0)
+    elapsed = max(months_between(goal.start_date, local_today()), 0)
     expected = goal.initial_cents
     if plan:
         points = project(goal.initial_cents, plan, elapsed, rate)
@@ -94,7 +94,7 @@ def timeline(db: Session, goal: Goal, viewer_id: int) -> list[dict]:
     by_month: dict[int, int] = {}
     for day, amount in rows:
         by_month[month_key(day)] = by_month.get(month_key(day), 0) + amount
-    today = month_key(now().date())
+    today = month_key(local_today())
     accumulated = goal.initial_cents
     result = []
     for i in range(horizon):

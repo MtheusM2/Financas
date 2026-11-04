@@ -7,7 +7,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.core.calc_graph import touch
-from app.core.db import now
+from app.core.db import now, local_today
 from app.modules.contas.models import Account
 from app.modules.contas.service import Scope, hidden_account_ids, scope_clause
 from app.modules.lancamentos.models import OUTFLOW_KINDS, MonthlyTotal, RecurringRule, Transaction
@@ -112,7 +112,7 @@ def add_transaction(db: Session, user_id: int, *, day: date, account_id: int, ow
 
 
 def materialize_rule(db: Session, rule: RecurringRule, until: int | None = None) -> None:
-    until = until or month_key(now().date())
+    until = until or month_key(local_today())
     if rule.end_month:
         until = min(until, rule.end_month)
     key = next_month(rule.last_generated_month) if rule.last_generated_month else rule.start_month
@@ -123,7 +123,7 @@ def materialize_rule(db: Session, rule: RecurringRule, until: int | None = None)
             date=day, account_id=rule.account_id, owner_user_id=rule.owner_user_id, kind=rule.kind,
             category_id=rule.category_id, description=rule.description, amount_cents=rule.amount_cents,
             hidden=rule.hidden, created_by=rule.owner_user_id, created_at=now(), rule_id=rule.id,
-            occurrence_month=key, edited=False, settled=day <= now().date(),
+            occurrence_month=key, edited=False, settled=day <= local_today(),
         ).on_conflict_do_nothing(index_elements=["rule_id", "occurrence_month"]))
         days.append(day)
         rule.last_generated_month = key
@@ -136,7 +136,7 @@ def settle_due_recurring(db: Session) -> None:
     """Ocorrencia recorrente nao editada vira realizada quando a data chega."""
     rows = db.scalars(select(Transaction).where(
         Transaction.rule_id.is_not(None), Transaction.settled.is_(False),
-        Transaction.edited.is_(False), Transaction.date <= now().date(),
+        Transaction.edited.is_(False), Transaction.date <= local_today(),
     )).all()
     for tx in rows:
         tx.settled = True

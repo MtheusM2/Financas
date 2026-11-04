@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from app.core.db import get_db, now
+from app.core.db import get_db, now, local_today
 from app.core.visibility import get_visible, visible_clause
 from app.modules.auditoria.models import record
 from app.modules.autenticacao.deps import current_user
@@ -260,7 +260,7 @@ def create(data: PayslipIn, db: Session = Depends(get_db), user=Depends(current_
         name = f"Salário {month:02d}/{year}" + (f" - {slip.company}" if slip.company else "")
         tx = add_transaction(db, user.id, day=income.date, account_id=account.id, owner_id=user.id, kind="renda",
                              amount_cents=data.liquido, description=name[:160], category_id=income.category_id,
-                             hidden=income.hidden, settled=income.date <= now().date(),
+                             hidden=income.hidden, settled=income.date <= local_today(),
                              competence_date=date(year, month, 1))
         db.flush()
         slip.transaction_id = tx.id
@@ -312,7 +312,7 @@ def analysis(db: Session = Depends(get_db), user=Depends(current_user)):
     balances = [{"id": b.id, "data": b.date, "saldo": b.balance_cents} for b in db.scalars(
         select(FgtsBalance).where(visible_clause(FgtsBalance, user.id), FgtsBalance.owner_user_id == user.id))]
     deposits = [{"referencia": p.reference_month, "valor": p.fgts_cents or 0} for p in rows]
-    return {"meses": months, "fgts": fgts_status(balances, deposits, now().date())}
+    return {"meses": months, "fgts": fgts_status(balances, deposits, local_today())}
 
 
 @router.post("/fgts")

@@ -9,7 +9,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.core.calc_graph import touch
-from app.core.db import get_db, now
+from app.core.db import get_db, local_today
 from app.core.visibility import apply_fields, get_visible, visible_clause
 from app.modules.auditoria.models import record
 from app.modules.autenticacao.deps import current_user
@@ -109,7 +109,7 @@ def serialize(db: Session, f: Financing, viewer_id: int) -> dict:
         "parcelas_pagas": paid, "parcelas_restantes": len(rows) - paid, "saldo_devedor": balance,
         "proxima_parcela": next_row.payment + next_row.fee if next_row else 0,
         "quitado": next_row is None, "oculta": f.hidden, "ativa": f.active, **totals(rows),
-        **due_status(f, len(rows), paid, now().date()),
+        **due_status(f, len(rows), paid, local_today()),
     }
 
 
