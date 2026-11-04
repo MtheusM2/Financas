@@ -1,0 +1,19 @@
+{
+  "_leia": "Sinonimos dos rotulos de holerite, ja sem acento, minusculos e sem pontos. Para aceitar um layout novo, acrescente o rotulo aqui: nao precisa mudar codigo.",
+  "colunas": {
+    "referencia": ["referencia", "ref", "qtde", "qtd", "quantidade", "horas dias"],
+    "vencimentos": ["vencimentos", "proventos", "creditos", "rendimentos", "ganhos", "valor proventos"],
+    "descontos": ["descontos", "debitos", "deducoes", "valor descontos"]
+  },
+  "totais": {
+    "total_vencimentos": ["total de vencimentos", "total vencimentos", "total de proventos", "total proventos", "total de creditos", "total creditos", "total bruto", "salario bruto"],
+    "total_descontos": ["total de descontos", "total descontos", "total de debitos", "total debitos", "total de deducoes"],
+    "liquido": ["valor liquido", "total liquido", "liquido a receber", "valor liquido a receber", "liquido a pagar", "salario liquido", "liquido"],
+    "salario_base": ["salario base", "sal base", "salario contratual"],
+    "base_inss": ["sal contr inss", "salario contribuicao inss", "sal contribuicao inss", "base inss", "base calc inss", "base calculo inss", "base de calculo inss"],
+    "base_fgts": ["base calc fgts", "base calculo fgts", "base de calculo fgts", "base fgts", "base do fgts"],
+    "fgts_mes": ["fgts do mes", "fgts mes", "fgts depositado", "deposito fgts", "valor fgts", "fgts"],
+    "base_irrf": ["base calc irrf", "base calculo irrf", "base de calculo irrf", "base irrf", "base calc ir", "base ir"]
+  },
+  "cabecalho_ignorar": ["recibo de pagamento", "demonstrativo de pagamento", "holerite", "contracheque", "folha mensal", "mensal", "mensalista", "codigo", "nome", "cbo"]
+}

@@ -1,0 +1,49 @@
+{
+	auto_https off
+	admin off
+}
+
+:80 {
+	encode gzip
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy no-referrer
+		Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+	}
+
+	handle /api/* {
+		# Descobre as copias da API pelo nome do servico, reparte as requisicoes
+		# e tira de circulacao a copia que parar de responder.
+		reverse_proxy {
+			dynamic a {
+				name api
+				port 8000
+				refresh 3s
+			}
+			lb_policy round_robin
+			lb_retries 2
+			lb_try_duration 5s
+			fail_duration 10s
+			health_uri /api/saude
+			health_interval 5s
+			health_timeout 3s
+		}
+	}
+
+	# Arquivo de uma versao antiga responde 404, para o app saber que precisa recarregar.
+	handle /assets/* {
+		root * /srv
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	handle {
+		root * /srv
+		@shell path /sw.js /index.html /
+		header @shell Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}

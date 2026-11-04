@@ -1,0 +1,70 @@
+name: financas
+
+x-api-env: &api-env
+  env_file: .env
+  environment:
+    DATABASE_URL: postgresql+psycopg://financas:${POSTGRES_PASSWORD}@db:5432/financas
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: financas
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: financas
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U financas"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    build: ./backend
+    <<: *api-env
+    command: alembic upgrade head
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    <<: *api-env
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*
+    deploy:
+      replicas: 2
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/api/saude', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  worker:
+    build: ./backend
+    restart: unless-stopped
+    <<: *api-env
+    command: python -m app.core.worker
+    # Pasta do Windows: os backups sobrevivem mesmo se o Docker for limpo.
+    volumes:
+      - ${BACKUP_PATH:?Defina BACKUP_PATH no .env}:/backups
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  web:
+    build: ./frontend
+    restart: unless-stopped
+    # So o proprio PC alcanca esta porta; o acesso externo passa pelo "tailscale serve".
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      - api
+
+volumes:
+  db-data:

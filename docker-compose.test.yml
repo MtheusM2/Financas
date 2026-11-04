@@ -1,0 +1,87 @@
+name: financas-test
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: test
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://test:test@db:5432/test
+      SECRET_KEY: chave-somente-para-testes
+      ALLOWED_EMAILS: ana@teste.com,bia@teste.com
+      EMAIL_BACKEND: memory
+      COOKIE_SECURE: "false"
+      BACKUP_KEY: chave-de-backup-somente-para-testes
+      BACKUP_DIR: /tmp/backups
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles: ["backend"]
+
+  migrate:
+    build: ./backend
+    command: alembic upgrade head
+    environment: &e2e-env
+      DATABASE_URL: postgresql+psycopg://test:test@db:5432/test
+      SECRET_KEY: chave-somente-para-testes
+      ALLOWED_EMAILS: ana@teste.com,bia@teste.com
+      EMAIL_BACKEND: file
+      EMAIL_FILE: /emails/emails.jsonl
+      COOKIE_SECURE: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles: ["e2e"]
+
+  api:
+    build: ./backend
+    user: root
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*
+    environment: *e2e-env
+    deploy:
+      replicas: 2
+    volumes:
+      - emails:/emails
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    profiles: ["e2e"]
+
+  web:
+    build: ./frontend
+    depends_on:
+      - api
+    profiles: ["e2e"]
+
+  e2e:
+    image: mcr.microsoft.com/playwright:v1.48.2-noble
+    working_dir: /e2e
+    environment:
+      BASE_URL: http://web
+      NODE_PATH: /e2e-deps/node_modules
+    command: sh -c "cd /e2e-deps && npm install --no-audit --no-fund --silent @playwright/test@1.48.2 && cd /e2e && /e2e-deps/node_modules/.bin/playwright test --reporter=line"
+    volumes:
+      - ./frontend/e2e:/e2e
+      - emails:/emails
+      - e2e-deps:/e2e-deps
+    depends_on:
+      - web
+    profiles: ["e2e"]
+
+volumes:
+  emails:
+  e2e-deps:
