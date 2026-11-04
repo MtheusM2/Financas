@@ -1,7 +1,7 @@
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.db import now
+from app.core.db import local_today
 from app.core.visibility import visible_clause
 from app.modules.contas.models import Category
 from app.modules.contas.service import Scope
@@ -21,7 +21,7 @@ AVERAGE_MONTHS = 3
 
 def _last_months(count: int) -> list[tuple[int, int]]:
     """Meses completos mais recentes, sem o mes atual."""
-    today = now().date()
+    today = local_today()
     year, month = today.year, today.month
     result = []
     for _ in range(count):
@@ -35,7 +35,7 @@ def averages(db: Session, viewer_id: int, scope: Scope) -> dict:
     rows = [summarize(totals_by_kind(db, viewer_id, scope, y, m)) for y, m in _last_months(AVERAGE_MONTHS)]
     rows = [r for r in rows if r["renda"] or r["saidas"]]
     if not rows:
-        today = now().date()
+        today = local_today()
         rows = [summarize(totals_by_kind(db, viewer_id, scope, today.year, today.month))]
     count = len(rows)
     return {

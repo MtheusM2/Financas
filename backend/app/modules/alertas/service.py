@@ -4,7 +4,7 @@ from datetime import date, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.db import now
+from app.core.db import local_today
 from app.core.email import send_email
 from app.core.visibility import visible_clause
 from app.modules.autenticacao.models import User
@@ -36,7 +36,7 @@ def _due_alert(tipo: str, name: str, due: date, amount: int, today: date) -> dic
 
 
 def collect(db: Session, viewer_id: int) -> list[dict]:
-    today = now().date()
+    today = local_today()
     alerts: list[dict | None] = []
     scope = Scope("casal")
 

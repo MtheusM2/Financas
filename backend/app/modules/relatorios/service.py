@@ -1,7 +1,7 @@
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.db import now
+from app.core.db import now, local_today
 from app.core.visibility import visible_clause
 from app.modules.auditoria.models import record
 from app.modules.autenticacao.models import User
@@ -91,7 +91,7 @@ def close_month(db: Session, year: int, month: int, actor_id: int | None = None)
 
 def close_due_months(db: Session) -> None:
     """Fecha sozinho meses passados com dados e sem registro. Mes reaberto continua aberto."""
-    today = now().date()
+    today = local_today()
     current = today.year * 100 + today.month
     rows = db.execute(
         select(MonthlyTotal.year, MonthlyTotal.month).distinct().order_by(MonthlyTotal.year, MonthlyTotal.month)

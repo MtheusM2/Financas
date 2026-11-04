@@ -5,7 +5,7 @@ from datetime import timedelta
 from sqlalchemy import update
 
 from app.core.backup import run_backup
-from app.core.db import SessionLocal, now
+from app.core.db import SessionLocal, now, local_today
 from app.core.jobs import Job, enqueue, next_job
 from app.core.registry import load_all_models
 from app.core.tracing import configure_logging, logger
@@ -37,7 +37,7 @@ HANDLERS = {
 
 
 def schedule_daily(db) -> None:
-    today = now().date().isoformat()
+    today = local_today().isoformat()
     for kind in HANDLERS:
         enqueue(db, kind, f"{kind}:{today}")
     db.commit()

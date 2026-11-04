@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.calc_graph import touch
-from app.core.db import get_db, now
+from app.core.db import get_db, local_today
 from app.modules.auditoria.models import record
 from app.modules.autenticacao.deps import current_user
 from app.modules.contas.service import Scope
@@ -58,7 +58,7 @@ def save_reserve(data: ReserveIn, db: Session = Depends(get_db), user=Depends(cu
         raise HTTPException(422, "Ainda não há gastos essenciais registrados. Informe a meta em reais.")
     goal = reserve_of(db)
     if goal is None:
-        goal = Goal(name="Reserva de emergência", owner_user_id=None, start_date=now().date(), is_reserve=True,
+        goal = Goal(name="Reserva de emergência", owner_user_id=None, start_date=local_today(), is_reserve=True,
                     active=True, hidden=False, shares={}, target_cents=target)
         db.add(goal)
     goal.target_months, goal.initial_cents, goal.monthly_cents = data.target_months, data.initial_cents, data.monthly_cents

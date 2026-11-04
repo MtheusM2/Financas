@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from app.core.db import get_db, now
+from app.core.db import get_db, local_today
 from app.core.visibility import apply_fields, get_visible, visible_clause
 from app.modules.auditoria.models import record
 from app.modules.autenticacao.deps import current_user
@@ -182,7 +182,7 @@ def create_income(data: IncomeIn, db: Session = Depends(get_db), user=Depends(cu
             tx = service.add_transaction(
                 db, user.id, day=item.date, account_id=data.account_id, owner_id=user.id, kind="renda",
                 amount_cents=item.amount_cents, description=data.description, category_id=data.category_id,
-                hidden=data.hidden, settled=item.date <= now().date(),
+                hidden=data.hidden, settled=item.date <= local_today(),
             )
             record(db, user.id, "criou", "lancamento", tx.id, private=tx.hidden)
         created += 1

@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.calc_graph import touch
-from app.core.db import get_db, now
+from app.core.db import get_db, local_today
 from app.core.visibility import apply_fields, get_visible, visible_clause
 from app.modules.auditoria.models import record
 from app.modules.autenticacao.deps import current_user
@@ -108,7 +108,7 @@ def serialize(db: Session, debt: Debt, viewer_id: int) -> dict:
         "saldo_restante": None if remaining is None else remaining * debt.installment_cents,
         "inicio": debt.start_date, "oculta": debt.hidden, "ativa": debt.active, "quitada": remaining == 0,
         "ultimo_pagamento": {"data": last.date, "valor": last.amount_cents} if last else None,
-        **due_status(debt, paid, now().date()),
+        **due_status(debt, paid, local_today()),
     }
 
 
