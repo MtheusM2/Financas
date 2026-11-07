@@ -22,7 +22,7 @@ const alertRow = (a, i) => (
 );
 
 export default function Painel() {
-  const { scope, period, user, modules } = useApp();
+  const { scope, period, user, modules, accounts } = useApp();
   const navigate = useNavigate();
   const params = query({ ano: period.ano, mes: period.mes, escopo: scope });
   const summary = useApi(`/painel/resumo${params}`);
@@ -39,20 +39,29 @@ export default function Painel() {
       <Loading state={summary} key="resumo">{(data) => {
         const t = data.totais;
         const share = (v) => (t.renda ? `${Math.round((v / t.renda) * 100)}% da renda` : undefined);
+        const expected = data.recebimentos.filter((r) => r.previsto).reduce((sum, r) => sum + r.valor, 0);
+        const now = new Date();
+        const ongoing = period.ano * 100 + period.mes >= now.getFullYear() * 100 + now.getMonth() + 1;
+        const noOpening = accounts.every((a) => !a.saldo_inicial);
         return (
-          <div className="tiles">
-            <Tile label={`Saldo nas contas no fim de ${monthName(period.mes)}`} value={<ResultValue value={data.saldo_final} />}
-              hint={`Começou o mês com ${money(data.saldo_inicial)}`} />
-            <Tile label="Sobra do mês" value={<ResultValue value={t.restante} />} hint="Renda recebida menos tudo o que saiu" />
-            <Tile label="Renda recebida" value={money(t.renda)} />
-            <Tile label="Total que saiu" value={money(t.saidas)} hint={share(t.saidas)} />
-            <Tile label="Gastos" value={money(t.gasto)} hint={share(t.gasto)} />
-            <Tile label="Fora do escopo" value={money(t.fora_escopo)} hint={share(t.fora_escopo)} />
-            <Tile label="Dívidas pagas" value={money(t.divida)} hint={share(t.divida)} />
-            <Tile label="Investido" value={money(t.investimento)} hint={share(t.investimento)} />
-            <Tile label="Guardado" value={money(t.guardado)} hint={share(t.guardado)} />
-            <Tile label="Lazer" value={money(t.lazer)} hint={share(t.lazer)} />
-          </div>
+          <>
+            <div className="tiles">
+              <Tile label="Renda total" value={money(t.renda)} hint={expected ? `já recebida · falta receber ${money(expected)}` : "já recebida"} />
+              <Tile label="Gastos" value={money(t.gasto)} hint={share(t.gasto)} />
+              <Tile label="Fora do escopo" value={money(t.fora_escopo)} hint={share(t.fora_escopo)} />
+              <Tile label="Dívidas pagas" value={money(t.divida)} hint={share(t.divida)} />
+              <Tile label="Investimentos" value={money(t.investimento)} hint={share(t.investimento)} />
+              <Tile label="Guardado" value={money(t.guardado)} hint={share(t.guardado)} />
+              <Tile label="Lazer" value={money(t.lazer)} hint={share(t.lazer)} />
+              <Tile label="Sobra do mês" value={<ResultValue value={t.restante} />} hint={`renda menos todas as saídas${t.renda ? ` · ${share(t.restante)}` : ""}`} />
+              <Tile label={ongoing ? "Saldo até agora" : "Saldo no fim do mês"} value={<ResultValue value={data.saldo_final} />}
+                hint={noOpening ? "sem saldo inicial das contas" : "inclui meses anteriores e saldo inicial"} />
+            </div>
+            <p className="muted" style={{ marginTop: -6, marginBottom: 14 }}>
+              Os quadros mostram só o que já entrou ou saiu. Contas a pagar e valores previstos aparecem na Previsão de saldo.
+              {noOpening && " Para o saldo bater com o banco, informe o saldo inicial de cada conta em Ajustes › Contas."}
+            </p>
+          </>
         );
       }}</Loading>
     ),
@@ -96,7 +105,7 @@ export default function Painel() {
               />
               <h3>Saldo ao longo do mês</h3>
               <LineChart data={rows} labels={labels} title={title} height={160} series={[{ key: "saldo", label: "Saldo", color: "var(--s1)" }]} />
-              <p className="muted">Só o que já foi pago ou recebido. Toque em um dia para ver os lançamentos.</p>
+              <p className="muted">Toque em um dia para ver os lançamentos.</p>
             </>
           );
         }}</Loading>

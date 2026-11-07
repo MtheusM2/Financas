@@ -131,9 +131,13 @@ def search(
         conditions.append(Transaction.category_id.in_(select(tree.c.id)))
     if busca:
         conditions.append(Transaction.description.icontains(busca, autoescape=True))
-    total, soma = db.execute(
-        select(func.count(), func.coalesce(func.sum(Transaction.amount_cents), 0)).where(*conditions)
+    is_income = Transaction.kind == "renda"
+    total, soma, entradas = db.execute(
+        select(func.count(), func.coalesce(func.sum(Transaction.amount_cents), 0),
+               func.coalesce(func.sum(Transaction.amount_cents).filter(is_income), 0)).where(*conditions)
     ).one()
+    # Entradas e saidas separadas: somar as duas juntas daria um total sem sentido.
+    entradas, saidas = int(entradas), int(soma) - int(entradas)
     rows = db.execute(
         select(Transaction, User.name, Account.name)
         .join(User, User.id == Transaction.owner_user_id)
@@ -143,7 +147,8 @@ def search(
         .offset((pagina - 1) * por_pagina).limit(por_pagina)
     )
     return {
-        "total": total, "soma": int(soma), "pagina": pagina,
+        "total": total, "soma": int(soma), "entradas": entradas, "saidas": saidas, "resultado": entradas - saidas,
+        "pagina": pagina,
         "itens": [{**serialize(t), "pessoa": name, "conta": account} for t, name, account in rows],
     }
 

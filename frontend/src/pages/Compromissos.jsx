@@ -38,7 +38,8 @@ function DebtForm({ debt, accounts, tags, canHide = true, submit, onSubmit, seco
         { name: "due", type: "date", label: "Próximo vencimento", required: true, help: "Depois repete nesse mesmo dia, todo mês." },
         { name: "repeat", type: "select", label: "Repetição", required: true, placeholder: false, value: "mensal", options: repeatOptions },
         repeat === "parcelada" && { name: "total_installments", type: "integer", label: "Total de parcelas", required: true, min: 1 },
-        repeat === "parcelada" && !debt && { name: "paid_before", type: "integer", label: "Parcelas pagas antes de usar o sistema", min: 0, value: "0", help: "Só as que você pagou antes de usar o sistema. Elas não saem do saldo. Pagou agora? Deixe 0, cadastre e toque em Registrar pagamento." },
+        repeat === "parcelada" && !debt && { name: "paid_before", type: "integer", label: "Parcelas pagas antes de usar o sistema", min: 0, value: "0",
+          help: "Só conta quantas faltam, não desconta do saldo. Para descontar um pagamento, deixe 0 e use Registrar pagamento depois de salvar." },
         { name: "category_id", type: "select", label: "Tag", options: tags, placeholder: "Sem tag", help: "Crie novas em Ajustes > Categorias e tags." },
         !debt && { name: "account_id", type: "select", label: "Conta", required: true, options: accountOptions(accounts) },
         canHide && hideField,
@@ -56,7 +57,7 @@ function PayDebt({ debt, onDone }) {
       <Form
         submit="Confirmar pagamento"
         fields={[
-          { name: "date", type: "date", label: "Pago em", required: true },
+          { name: "date", type: "date", label: "Pago em", required: true, help: "O valor sai do saldo no mês desta data." },
           { name: "amount_cents", type: "money", label: "Valor pago", required: true, value: debt.parcela },
         ]}
         onSubmit={async (v) => {
@@ -88,6 +89,7 @@ function FixPaidBefore({ debt: d, onDone }) {
     )}</Foldout>
   );
 }
+
 
 function DebtCard({ debt: d, tags, onDone, selected, onSelect }) {
   const { user } = useApp();
@@ -135,10 +137,10 @@ function DebtCard({ debt: d, tags, onDone, selected, onSelect }) {
           {hasPayment ? ` · último pagamento: ${money(d.ultimo_pagamento.valor)} em ${dateBR(d.ultimo_pagamento.data)}` : ""}
         </p>
       )}
-      {d.quitada && paymentCount(d) === 0 && d.parcelas_ja_pagas > 0 && (
+      {d.quitada && paymentCount(d) === 0 && (
         <Status level="atencao">
-          Está como quitada, mas nenhum pagamento saiu do saldo: as {d.parcelas_ja_pagas} parcela(s) foram marcadas como pagas antes de usar o sistema.
-          Se você pagou agora, toque em Corrigir parcelas pagas antes, diminua o número e registre o pagamento.
+          Marcada como quitada só por "parcelas pagas antes", sem nenhum pagamento registrado: nenhum valor saiu do saldo.
+          Se o pagamento foi feito agora, toque em Corrigir parcelas pagas antes, diminua o número e depois use Registrar pagamento.
         </Status>
       )}
       {d.total_parcelas && <Progress value={(d.parcelas_pagas / d.total_parcelas) * 100} />}
@@ -353,7 +355,8 @@ function Financings({ accounts }) {
             { name: "term_months", type: "integer", label: "Prazo em meses", required: true, min: 1, maxValue: 600 },
             { name: "monthly_fee_cents", type: "money", label: "Seguro e taxas por mês" },
             { name: "first_due", type: "date", label: "Primeiro vencimento", required: true },
-            { name: "paid_before", type: "integer", label: "Parcelas pagas antes de usar o sistema", min: 0, value: "0", help: "Só as que você pagou antes de usar o sistema. Elas não saem do saldo. Pagou agora? Deixe 0, cadastre e toque em Registrar pagamento." },
+            { name: "paid_before", type: "integer", label: "Parcelas pagas antes de usar o sistema", min: 0, value: "0",
+              help: "Só conta quantas faltam, não desconta do saldo." },
             { name: "account_id", type: "select", label: "Conta", required: true, options: accountOptions(accounts) },
             hideField,
           ]}

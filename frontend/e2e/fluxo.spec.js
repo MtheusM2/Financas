@@ -90,7 +90,7 @@ test("o sistema funciona de ponta a ponta", async ({ page }, info) => {
   // Voltar retorna ao Painel e mostra os novos totais
   await page.getByRole("button", { name: "Voltar" }).click();
   await expect(page.getByRole("heading", { name: "Painel" })).toBeVisible();
-  await expect(page.getByText("Renda recebida")).toBeVisible();
+  await expect(page.getByText("Renda total")).toBeVisible();
   await expect(page.getByRole("heading", { name: /Fluxo de/ })).toBeVisible();
   await expect(page.locator(".chart svg").first()).toBeVisible();
   if (info.project.name === "pc") await page.screenshot({ path: "test-results/painel-pc.png", fullPage: true });

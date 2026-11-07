@@ -162,3 +162,11 @@ def test_cannot_post_to_other_persons_account(ana, bia):
         "date": "2026-11-05", "account_id": personal_account(bia), "kind": "gasto", "amount_cents": 100,
     })
     assert response.status_code == 422
+
+
+def test_search_sums_income_and_outflows_apart(ana):
+    add_tx(ana, "2026-11-05", "renda", 300000)
+    add_tx(ana, "2026-11-06", "gasto", 12000)
+    add_tx(ana, "2026-11-07", "divida", 34000)
+    found = ana.get("/api/lancamentos").json()
+    assert found["entradas"] == 300000 and found["saidas"] == 46000 and found["resultado"] == 254000
