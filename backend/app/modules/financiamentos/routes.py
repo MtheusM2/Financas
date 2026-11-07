@@ -124,6 +124,9 @@ def create_financing(data: FinancingIn, db: Session = Depends(get_db), user=Depe
     check_account(db, data.account_id, user.id)
     if data.down_payment_cents >= data.asset_value_cents:
         raise HTTPException(422, "A entrada precisa ser menor que o valor do bem.")
+    if data.paid_before >= data.term_months:
+        raise HTTPException(422, "As parcelas já pagas não podem ser todas. Elas não saem do saldo: "
+                                 "para um pagamento feito agora, cadastre e use Registrar pagamento.")
     financing = Financing(**data.model_dump(), owner_user_id=user.id, active=True)
     db.add(financing)
     db.flush()

@@ -6,9 +6,10 @@ import { useApp } from "../main";
 import { Empty, Foldout, Loading, ResultValue, Status, Tile } from "../ui";
 import { Ceilings, Forecast } from "./Planejamento";
 
+// Mesmas cores em todos os graficos: entrada verde, saida laranja, fora do escopo roxo, saldo azul.
 const COLORS = {
-  gasto: "var(--s1)", fora_escopo: "var(--s2)", divida: "var(--s3)", investimento: "var(--s4)",
-  guardado: "var(--s5)", lazer: "var(--s6)",
+  gasto: "var(--s2)", fora_escopo: "var(--s7)", divida: "var(--s5)", investimento: "var(--s1)",
+  guardado: "var(--s3)", lazer: "var(--s4)",
 };
 const pad = (n) => String(n).padStart(2, "0");
 const ALERT_LEVEL = { critico: "compromete", atencao: "atencao", info: "info" };
@@ -40,15 +41,17 @@ export default function Painel() {
         const share = (v) => (t.renda ? `${Math.round((v / t.renda) * 100)}% da renda` : undefined);
         return (
           <div className="tiles">
-            <Tile label="Renda total" value={money(t.renda)} />
+            <Tile label={`Saldo nas contas no fim de ${monthName(period.mes)}`} value={<ResultValue value={data.saldo_final} />}
+              hint={`Começou o mês com ${money(data.saldo_inicial)}`} />
+            <Tile label="Sobra do mês" value={<ResultValue value={t.restante} />} hint="Renda recebida menos tudo o que saiu" />
+            <Tile label="Renda recebida" value={money(t.renda)} />
+            <Tile label="Total que saiu" value={money(t.saidas)} hint={share(t.saidas)} />
             <Tile label="Gastos" value={money(t.gasto)} hint={share(t.gasto)} />
             <Tile label="Fora do escopo" value={money(t.fora_escopo)} hint={share(t.fora_escopo)} />
-            <Tile label="Dívidas" value={money(t.divida)} hint={share(t.divida)} />
-            <Tile label="Investimentos" value={money(t.investimento)} hint={share(t.investimento)} />
+            <Tile label="Dívidas pagas" value={money(t.divida)} hint={share(t.divida)} />
+            <Tile label="Investido" value={money(t.investimento)} hint={share(t.investimento)} />
             <Tile label="Guardado" value={money(t.guardado)} hint={share(t.guardado)} />
             <Tile label="Lazer" value={money(t.lazer)} hint={share(t.lazer)} />
-            <Tile label="Restante" value={<ResultValue value={t.restante} />} hint={share(t.restante)} />
-            <Tile label="Saldo no fim do mês" value={<ResultValue value={data.saldo_final} />} />
           </div>
         );
       }}</Loading>
@@ -82,9 +85,9 @@ export default function Painel() {
               <BarChart
                 data={rows} labels={labels} title={title} height={200}
                 series={[
-                  { key: "entradas", label: "Entradas", color: "var(--s1)" },
+                  { key: "entradas", label: "Entradas", color: "var(--s3)" },
                   { key: "saidas_normais", label: "Saídas", color: "var(--s2)", down: true },
-                  { key: "fora_escopo", label: "Fora do escopo", color: "var(--s3)", down: true },
+                  { key: "fora_escopo", label: "Fora do escopo", color: "var(--s7)", down: true },
                 ]}
                 onSelect={(i) => {
                   const day = `${period.ano}-${pad(period.mes)}-${pad(rows[i].dia)}`;
@@ -93,7 +96,7 @@ export default function Painel() {
               />
               <h3>Saldo ao longo do mês</h3>
               <LineChart data={rows} labels={labels} title={title} height={160} series={[{ key: "saldo", label: "Saldo", color: "var(--s1)" }]} />
-              <p className="muted">Toque em um dia para ver os lançamentos.</p>
+              <p className="muted">Só o que já foi pago ou recebido. Toque em um dia para ver os lançamentos.</p>
             </>
           );
         }}</Loading>
@@ -123,9 +126,9 @@ export default function Painel() {
             labels={data.evolucao.map((e) => monthName(e.mes))}
             title={(i) => `${monthName(data.evolucao[i].mes)}/${data.evolucao[i].ano}`}
             series={[
-              { key: "renda", label: "Renda", color: "var(--s1)" },
+              { key: "renda", label: "Renda", color: "var(--s3)" },
               { key: "saidas", label: "Saídas", color: "var(--s2)" },
-              { key: "restante", label: "Restante", color: "var(--s3)" },
+              { key: "restante", label: "Sobra", color: "var(--s1)", dash: "5 4" },
             ]}
           />
         )}</Loading>

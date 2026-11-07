@@ -147,3 +147,41 @@ def test_today_follows_brasilia_time_at_night(ana, clock):
     assert "Aluguel vence hoje" in titles(ana)
     clock.current = datetime(2026, 11, 21, 3, 0, tzinfo=timezone.utc)  # meia-noite em Brasilia
     assert ana.get("/api/dividas").json()[0]["situacao"] == "atrasada"
+
+
+def saldo_final(client):
+    return client.get("/api/painel/resumo", params={"ano": 2026, "mes": 11, "escopo": "casal"}).json()["saldo_final"]
+
+
+def test_paying_a_debt_lowers_the_balance(ana):
+    debt = new_debt(ana, total_installments=1)
+    before = saldo_final(ana)
+    ana.post(f"/api/dividas/{debt['id']}/pagar", json={"date": "2026-11-15"})
+    assert saldo_final(ana) == before - 50000
+
+
+def test_debt_cannot_be_born_already_paid_off(ana):
+    """Parcelas ja pagas nao criam lancamento: se fossem todas, o pagamento nunca sairia do saldo."""
+    body = {"name": "Cartão", "account_id": personal_account(ana), "installment_cents": 50000,
+            "due_day": 20, "start_date": "2026-11-01", "total_installments": 1, "paid_before": 1}
+    response = ana.post("/api/dividas", json=body)
+    assert response.status_code == 422 and "Registrar pagamento" in response.json()["detail"]
+
+
+def test_paid_before_can_be_fixed_and_then_paid(ana):
+    debt = new_debt(ana, total_installments=3, paid_before=2)
+    fixed = ana.patch(f"/api/dividas/{debt['id']}", json={"paid_before": 1}).json()
+    assert fixed["parcelas_ja_pagas"] == 1 and fixed["parcelas_restantes"] == 2
+    assert ana.patch(f"/api/dividas/{debt['id']}", json={"paid_before": 4}).status_code == 422
+    before = saldo_final(ana)
+    ana.post(f"/api/dividas/{debt['id']}/pagar", json={"date": "2026-11-15"})
+    assert saldo_final(ana) == before - 50000
+
+
+def test_forecast_today_balance_ignores_future_dated_entries(ana):
+    account = personal_account(ana)
+    ana.post("/api/lancamentos", json={"date": "2026-11-10", "account_id": account, "kind": "renda", "amount_cents": 100000})
+    ana.post("/api/lancamentos", json={"date": "2026-11-28", "account_id": account, "kind": "gasto", "amount_cents": 30000})
+    data = ana.get("/api/previsao", params={"meses": 1}).json()
+    assert data["saldo_atual"] == 100000
+    assert data["meses"][0]["saldo"] == 70000

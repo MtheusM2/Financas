@@ -6,7 +6,7 @@ import { useApp } from "../main";
 import { Empty, Loading, Progress, ResultValue, Tile } from "../ui";
 
 const ROWS = [["renda", KINDS.renda], ["gasto", KINDS.gasto], ["fora_escopo", KINDS.fora_escopo], ["divida", KINDS.divida],
-  ["investimento", KINDS.investimento], ["guardado", KINDS.guardado], ["lazer", KINDS.lazer], ["saidas", "Total de saídas"], ["restante", "Restante"]];
+  ["investimento", KINDS.investimento], ["guardado", KINDS.guardado], ["lazer", KINDS.lazer], ["saidas", "Total de saídas"], ["restante", "Sobra (renda menos saídas)"]];
 const key = (m) => Number(m.replace("-", ""));
 
 function CompareTable({ data, labelA, labelB }) {
@@ -98,12 +98,12 @@ function History() {
         <>
           <BarChart
             data={rows} labels={rows.map((r) => monthLabel(r.periodo))} height={200}
-            series={[{ key: "renda", label: "Renda", color: "var(--s1)" }, { key: "saidas", label: "Saídas", color: "var(--s2)", down: true }]}
+            series={[{ key: "renda", label: "Renda", color: "var(--s3)" }, { key: "saidas", label: "Saídas", color: "var(--s2)", down: true }]}
           />
           <h3>Investido e guardado no período</h3>
           <LineChart
             data={rows} labels={rows.map((r) => monthLabel(r.periodo))} height={170}
-            series={[{ key: "investimento", label: "Investimentos", color: "var(--s1)" }, { key: "guardado", label: "Guardado", color: "var(--s2)" }, { key: "divida", label: "Dívidas pagas", color: "var(--s3)" }]}
+            series={[{ key: "investimento", label: "Investimentos", color: "var(--s1)" }, { key: "guardado", label: "Guardado", color: "var(--s3)" }, { key: "divida", label: "Dívidas pagas", color: "var(--s5)" }]}
           />
         </>
       )}</Loading>
