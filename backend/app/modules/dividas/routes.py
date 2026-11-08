@@ -39,6 +39,7 @@ class DebtPatch(BaseModel):
     installment_cents: int | None = Field(default=None, gt=0)
     total_installments: int | None = Field(default=None, gt=0)
     next_due: Optional[Date] = None
+    paid_before: int | None = Field(default=None, ge=0)
     hidden: bool | None = None
     active: bool | None = None
 
@@ -120,6 +121,10 @@ def list_debts(db: Session = Depends(get_db), user=Depends(current_user)):
 
 @router.post("")
 def create_debt(data: DebtIn, db: Session = Depends(get_db), user=Depends(current_user)):
+    # "Parcelas ja pagas" nao cria lancamento: uma divida que ja nasce quitada nunca sairia do saldo.
+    if data.total_installments is not None and data.paid_before >= data.total_installments:
+        raise HTTPException(422, "As parcelas já pagas não podem ser todas. Elas não saem do saldo: "
+                                 "para um pagamento feito agora, cadastre e use Registrar pagamento.")
     check_account(db, data.account_id, user.id)
     check_category(db, data.category_id)
     debt = Debt(**data.model_dump(), owner_user_id=user.id, active=True)
@@ -139,6 +144,12 @@ def update_debt(debt_id: int, data: DebtPatch, db: Session = Depends(get_db), us
     if "hidden" in values and debt.owner_user_id != user.id:
         raise HTTPException(422, "Só a própria pessoa pode ocultar.")
     check_category(db, values.get("category_id"))
+    if "paid_before" in values or "total_installments" in values:
+        registered = paid_count(db, debt, user.id)[0] - debt.paid_before
+        before = values.get("paid_before", debt.paid_before)
+        total = values.get("total_installments", debt.total_installments)
+        if total is not None and before + registered > total:
+            raise HTTPException(422, "As parcelas já pagas e os pagamentos registrados passam do total de parcelas.")
     next_due = values.pop("next_due", None)
     if next_due:
         # O inicio recua o que ja foi pago, para o proximo vencimento cair na data escolhida.

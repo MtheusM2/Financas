@@ -6,9 +6,10 @@ import { useApp } from "../main";
 import { Empty, Foldout, Loading, ResultValue, Status, Tile } from "../ui";
 import { Ceilings, Forecast } from "./Planejamento";
 
+// Mesmas cores em todos os graficos: entrada verde, saida laranja, fora do escopo roxo, saldo azul.
 const COLORS = {
-  gasto: "var(--s1)", fora_escopo: "var(--s2)", divida: "var(--s3)", investimento: "var(--s4)",
-  guardado: "var(--s5)", lazer: "var(--s6)",
+  gasto: "var(--s2)", fora_escopo: "var(--s7)", divida: "var(--s5)", investimento: "var(--s1)",
+  guardado: "var(--s3)", lazer: "var(--s4)",
 };
 const pad = (n) => String(n).padStart(2, "0");
 const ALERT_LEVEL = { critico: "compromete", atencao: "atencao", info: "info" };
@@ -21,7 +22,7 @@ const alertRow = (a, i) => (
 );
 
 export default function Painel() {
-  const { scope, period, user, modules } = useApp();
+  const { scope, period, user, modules, accounts } = useApp();
   const navigate = useNavigate();
   const params = query({ ano: period.ano, mes: period.mes, escopo: scope });
   const summary = useApi(`/painel/resumo${params}`);
@@ -38,18 +39,29 @@ export default function Painel() {
       <Loading state={summary} key="resumo">{(data) => {
         const t = data.totais;
         const share = (v) => (t.renda ? `${Math.round((v / t.renda) * 100)}% da renda` : undefined);
+        const expected = data.recebimentos.filter((r) => r.previsto).reduce((sum, r) => sum + r.valor, 0);
+        const now = new Date();
+        const ongoing = period.ano * 100 + period.mes >= now.getFullYear() * 100 + now.getMonth() + 1;
+        const noOpening = accounts.every((a) => !a.saldo_inicial);
         return (
-          <div className="tiles">
-            <Tile label="Renda total" value={money(t.renda)} />
-            <Tile label="Gastos" value={money(t.gasto)} hint={share(t.gasto)} />
-            <Tile label="Fora do escopo" value={money(t.fora_escopo)} hint={share(t.fora_escopo)} />
-            <Tile label="Dívidas" value={money(t.divida)} hint={share(t.divida)} />
-            <Tile label="Investimentos" value={money(t.investimento)} hint={share(t.investimento)} />
-            <Tile label="Guardado" value={money(t.guardado)} hint={share(t.guardado)} />
-            <Tile label="Lazer" value={money(t.lazer)} hint={share(t.lazer)} />
-            <Tile label="Restante" value={<ResultValue value={t.restante} />} hint={share(t.restante)} />
-            <Tile label="Saldo no fim do mês" value={<ResultValue value={data.saldo_final} />} />
-          </div>
+          <>
+            <div className="tiles">
+              <Tile label="Renda total" value={money(t.renda)} hint={expected ? `já recebida · falta receber ${money(expected)}` : "já recebida"} />
+              <Tile label="Gastos" value={money(t.gasto)} hint={share(t.gasto)} />
+              <Tile label="Fora do escopo" value={money(t.fora_escopo)} hint={share(t.fora_escopo)} />
+              <Tile label="Dívidas pagas" value={money(t.divida)} hint={share(t.divida)} />
+              <Tile label="Investimentos" value={money(t.investimento)} hint={share(t.investimento)} />
+              <Tile label="Guardado" value={money(t.guardado)} hint={share(t.guardado)} />
+              <Tile label="Lazer" value={money(t.lazer)} hint={share(t.lazer)} />
+              <Tile label="Sobra do mês" value={<ResultValue value={t.restante} />} hint={`renda menos todas as saídas${t.renda ? ` · ${share(t.restante)}` : ""}`} />
+              <Tile label={ongoing ? "Saldo até agora" : "Saldo no fim do mês"} value={<ResultValue value={data.saldo_final} />}
+                hint={noOpening ? "sem saldo inicial das contas" : "inclui meses anteriores e saldo inicial"} />
+            </div>
+            <p className="muted" style={{ marginTop: -6, marginBottom: 14 }}>
+              Os quadros mostram só o que já entrou ou saiu. Contas a pagar e valores previstos aparecem na Previsão de saldo.
+              {noOpening && " Para o saldo bater com o banco, informe o saldo inicial de cada conta em Ajustes › Contas."}
+            </p>
+          </>
         );
       }}</Loading>
     ),
@@ -82,9 +94,9 @@ export default function Painel() {
               <BarChart
                 data={rows} labels={labels} title={title} height={200}
                 series={[
-                  { key: "entradas", label: "Entradas", color: "var(--s1)" },
+                  { key: "entradas", label: "Entradas", color: "var(--s3)" },
                   { key: "saidas_normais", label: "Saídas", color: "var(--s2)", down: true },
-                  { key: "fora_escopo", label: "Fora do escopo", color: "var(--s3)", down: true },
+                  { key: "fora_escopo", label: "Fora do escopo", color: "var(--s7)", down: true },
                 ]}
                 onSelect={(i) => {
                   const day = `${period.ano}-${pad(period.mes)}-${pad(rows[i].dia)}`;
@@ -123,9 +135,9 @@ export default function Painel() {
             labels={data.evolucao.map((e) => monthName(e.mes))}
             title={(i) => `${monthName(data.evolucao[i].mes)}/${data.evolucao[i].ano}`}
             series={[
-              { key: "renda", label: "Renda", color: "var(--s1)" },
+              { key: "renda", label: "Renda", color: "var(--s3)" },
               { key: "saidas", label: "Saídas", color: "var(--s2)" },
-              { key: "restante", label: "Restante", color: "var(--s3)" },
+              { key: "restante", label: "Sobra", color: "var(--s1)", dash: "5 4" },
             ]}
           />
         )}</Loading>

@@ -38,7 +38,8 @@ function DebtForm({ debt, accounts, tags, canHide = true, submit, onSubmit, seco
         { name: "due", type: "date", label: "Próximo vencimento", required: true, help: "Depois repete nesse mesmo dia, todo mês." },
         { name: "repeat", type: "select", label: "Repetição", required: true, placeholder: false, value: "mensal", options: repeatOptions },
         repeat === "parcelada" && { name: "total_installments", type: "integer", label: "Total de parcelas", required: true, min: 1 },
-        repeat === "parcelada" && !debt && { name: "paid_before", type: "integer", label: "Parcelas já pagas", min: 0, value: "0" },
+        repeat === "parcelada" && !debt && { name: "paid_before", type: "integer", label: "Parcelas pagas antes de usar o sistema", min: 0, value: "0",
+          help: "Só conta quantas faltam, não desconta do saldo. Para descontar um pagamento, deixe 0 e use Registrar pagamento depois de salvar." },
         { name: "category_id", type: "select", label: "Tag", options: tags, placeholder: "Sem tag", help: "Crie novas em Ajustes > Categorias e tags." },
         !debt && { name: "account_id", type: "select", label: "Conta", required: true, options: accountOptions(accounts) },
         canHide && hideField,
@@ -56,7 +57,7 @@ function PayDebt({ debt, onDone }) {
       <Form
         submit="Confirmar pagamento"
         fields={[
-          { name: "date", type: "date", label: "Pago em", required: true },
+          { name: "date", type: "date", label: "Pago em", required: true, help: "O valor sai do saldo no mês desta data." },
           { name: "amount_cents", type: "money", label: "Valor pago", required: true, value: debt.parcela },
         ]}
         onSubmit={async (v) => {
@@ -69,6 +70,26 @@ function PayDebt({ debt, onDone }) {
 }
 
 const paymentCount = (d) => d.parcelas_pagas - d.parcelas_ja_pagas;
+
+function FixPaidBefore({ debt: d, onDone }) {
+  return (
+    <Foldout label="Corrigir parcelas pagas antes">{(close) => (
+      <Form
+        resetOnSuccess={false} submit="Salvar"
+        fields={[{
+          name: "paid_before", type: "integer", label: "Parcelas pagas antes de usar o sistema", required: true, min: 0,
+          value: String(d.parcelas_ja_pagas),
+          help: "Elas não saem do saldo. Se alguma foi paga agora, diminua aqui e depois toque em Registrar pagamento.",
+        }]}
+        onSubmit={async (v) => {
+          await api(`/dividas/${d.id}`, { method: "PATCH", body: { paid_before: v.paid_before } });
+          close(); onDone(`${d.nome} corrigida. Agora registre o pagamento para ele sair do saldo.`);
+        }}
+      />
+    )}</Foldout>
+  );
+}
+
 
 function DebtCard({ debt: d, tags, onDone, selected, onSelect }) {
   const { user } = useApp();
@@ -116,6 +137,12 @@ function DebtCard({ debt: d, tags, onDone, selected, onSelect }) {
           {hasPayment ? ` · último pagamento: ${money(d.ultimo_pagamento.valor)} em ${dateBR(d.ultimo_pagamento.data)}` : ""}
         </p>
       )}
+      {d.quitada && paymentCount(d) === 0 && (
+        <Status level="atencao">
+          Marcada como quitada só por "parcelas pagas antes", sem nenhum pagamento registrado: nenhum valor saiu do saldo.
+          Se o pagamento foi feito agora, toque em Corrigir parcelas pagas antes, diminua o número e depois use Registrar pagamento.
+        </Status>
+      )}
       {d.total_parcelas && <Progress value={(d.parcelas_pagas / d.total_parcelas) * 100} />}
       <div className="row" style={{ marginTop: 8 }}>
         {d.ativa && !d.quitada && <PayDebt debt={d} onDone={onDone} />}
@@ -134,6 +161,7 @@ function DebtCard({ debt: d, tags, onDone, selected, onSelect }) {
             />
           )}</Foldout>
         )}
+        {d.ativa && d.parcelas_ja_pagas > 0 && <FixPaidBefore debt={d} onDone={onDone} />}
         {hasPayment && <button type="button" className="small" onClick={undo}>Desfazer último pagamento</button>}
         {!d.ativa && <button type="button" className="small" onClick={() => setActive(true)}>Reativar</button>}
         {d.ativa && !d.quitada && <button type="button" className="small" onClick={() => setActive(false)}>Encerrar</button>}
@@ -327,7 +355,8 @@ function Financings({ accounts }) {
             { name: "term_months", type: "integer", label: "Prazo em meses", required: true, min: 1, maxValue: 600 },
             { name: "monthly_fee_cents", type: "money", label: "Seguro e taxas por mês" },
             { name: "first_due", type: "date", label: "Primeiro vencimento", required: true },
-            { name: "paid_before", type: "integer", label: "Parcelas já pagas", min: 0, value: "0" },
+            { name: "paid_before", type: "integer", label: "Parcelas pagas antes de usar o sistema", min: 0, value: "0",
+              help: "Só conta quantas faltam, não desconta do saldo." },
             { name: "account_id", type: "select", label: "Conta", required: true, options: accountOptions(accounts) },
             hideField,
           ]}

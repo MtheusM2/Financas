@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { api, query, useApi } from "../api";
 import { dateBR, KINDS, money, parseMoney, today } from "../format";
 import { useApp } from "../main";
-import { Empty, Foldout, Form, Loading, Status } from "../ui";
+import { Empty, Foldout, Form, Loading, ResultValue, Status } from "../ui";
 
 const kindOptions = Object.entries(KINDS).map(([value, label]) => ({ value, label }));
 
@@ -27,7 +27,8 @@ function ownAccountDefault(accounts, user) {
 function txFields(accounts, categories, user) {
   return [
     { name: "date", type: "date", label: "Data", required: true },
-    { name: "kind", type: "select", label: "Tipo", required: true, options: kindOptions, value: "gasto", placeholder: false },
+    { name: "kind", type: "select", label: "Tipo", required: true, options: kindOptions, value: "gasto", placeholder: false,
+      help: "Para pagar uma dívida já cadastrada, use Dívidas › Registrar pagamento, senão ela continua aparecendo como em aberto." },
     { name: "amount_cents", type: "money", label: "Valor", required: true },
     { name: "description", label: "Descrição", max: 160 },
     { name: "account_id", type: "select", label: "Conta", required: true, options: accountOptions(accounts), value: ownAccountDefault(accounts, user), placeholder: false },
@@ -258,7 +259,13 @@ export default function Lancamentos() {
         <div style={{ marginTop: 12 }}>
           <Loading state={list}>{(data) => (data.itens.length ? (
             <>
-              <p className="muted">{data.total} lançamento(s), somando {money(data.soma)}.</p>
+              <p className="muted">
+                {data.total} lançamento(s)
+                {data.entradas > 0 && <> · entradas <span className="pos">{money(data.entradas)}</span></>}
+                {data.saidas > 0 && <> · saídas −{money(data.saidas)}</>}
+                {data.entradas > 0 && data.saidas > 0 && <> · resultado <ResultValue value={data.resultado} /></>}
+                . Inclui os previstos.
+              </p>
               <div className="table-wrap"><table>
                 <thead><tr><th>Data</th><th>Descrição</th><th>Pessoa</th><th className="num">Valor</th><th /></tr></thead>
                 <tbody>{data.itens.map((item) => (

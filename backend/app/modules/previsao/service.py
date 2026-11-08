@@ -14,7 +14,7 @@ from app.modules.financiamentos.models import Financing
 from app.modules.financiamentos.routes import installment_due, installments_paid, schedule
 from app.modules.investimentos.models import Investment
 from app.modules.lancamentos.models import RecurringRule, Transaction
-from app.modules.lancamentos.service import balance_before, clamp_day, month_key, next_month, split_month, tx_filter
+from app.modules.lancamentos.service import balance_until, clamp_day, month_key, next_month, split_month, tx_filter
 from app.modules.objetivos.models import Goal
 from app.modules.objetivos.service import planned_monthly
 from app.modules.orcamento.service import _in_scope
@@ -46,6 +46,12 @@ def collect_events(db: Session, viewer_id: int, scope: Scope, today: date, end_k
     for tx in pending:
         # O que ja venceu e nao foi quitado pesa no saldo de hoje.
         events.append(Event(max(tx.date, today), _signed(tx.kind, tx.amount_cents), tx.description or tx.kind, "previsto"))
+    # Lancado como pago, mas com data futura: entra no dia dele, e nao no saldo de hoje.
+    end = clamp_day(end_key, 31)
+    future = db.scalars(select(Transaction).where(
+        Transaction.settled.is_(True), Transaction.date > today, Transaction.date <= end, tx_filter(viewer_id, scope)))
+    for tx in future:
+        events.append(Event(tx.date, _signed(tx.kind, tx.amount_cents), tx.description or tx.kind, "lancado"))
 
     rules = db.scalars(select(RecurringRule).where(RecurringRule.active.is_(True), visible_clause(RecurringRule, viewer_id)))
     for rule in rules:
@@ -99,7 +105,7 @@ def forecast(db: Session, viewer_id: int, scope: Scope, months: int = 6, include
     end_key = month_key(today)
     for _ in range(months - 1):
         end_key = next_month(end_key)
-    start_balance = opening_balance(db, viewer_id, scope) + balance_before(db, viewer_id, scope, 2999, 12)
+    start_balance = opening_balance(db, viewer_id, scope) + balance_until(db, viewer_id, scope, today)
     events = collect_events(db, viewer_id, scope, today, end_key, include_plans)
 
     buckets = {key: {"entradas": 0, "saidas": 0} for key in _months(month_key(today), end_key)}

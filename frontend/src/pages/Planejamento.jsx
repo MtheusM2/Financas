@@ -44,7 +44,7 @@ export function Forecast() {
             </div>
             <LineChart data={rows} labels={labels} height={180} series={[{ key: "saldo", label: "Saldo previsto", color: "var(--s1)" }]} />
             <h3>Entradas e saídas previstas</h3>
-            <BarChart data={rows} labels={labels} height={170} series={[{ key: "entradas", label: "Entradas", color: "var(--s1)" }, { key: "saidas", label: "Saídas", color: "var(--s2)", down: true }]} />
+            <BarChart data={rows} labels={labels} height={170} series={[{ key: "entradas", label: "Entradas", color: "var(--s3)" }, { key: "saidas", label: "Saídas", color: "var(--s2)", down: true }]} />
             <p className="muted">Usa o que está lançado como previsto, as regras recorrentes, as dívidas e as parcelas. Lançamentos manuais do dia a dia só entram depois de registrados.</p>
             {data.proximos.length > 0 && (
               <Foldout label="Ver próximos itens">{() => (

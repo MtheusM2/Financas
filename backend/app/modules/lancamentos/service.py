@@ -183,6 +183,16 @@ def balance_before(db: Session, viewer_id: int, scope: Scope, year: int, month: 
     return sum(int(t) if k == "renda" else -int(t) for k, t in rows)
 
 
+def balance_until(db: Session, viewer_id: int, scope: Scope, day: date) -> int:
+    """Tudo o que ja entrou e saiu ate o dia, inclusive, sem o saldo inicial."""
+    rows = db.execute(
+        select(Transaction.kind, func.sum(Transaction.amount_cents))
+        .where(Transaction.date <= day, Transaction.settled.is_(True), tx_filter(viewer_id, scope))
+        .group_by(Transaction.kind)
+    )
+    return sum(int(t) if k == "renda" else -int(t) for k, t in rows)
+
+
 def daily_flow(db: Session, viewer_id: int, scope: Scope, year: int, month: int, opening: int) -> list[dict]:
     last_day = calendar.monthrange(year, month)[1]
     rows = db.execute(
